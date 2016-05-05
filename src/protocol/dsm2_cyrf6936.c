@@ -140,16 +140,11 @@ static const u8 pncodes[5][9][8] = {
 
 static const u8 pn_bind[] = { 0xc6,0x94,0x22,0xfe,0x48,0xe6,0x57,0x4e };
 
-static const u8 ch_map4[] = {0, 1, 2, 3, 0xff, 0xff, 0xff};    //Guess
-static const u8 ch_map5[] = {0, 1, 2, 3, 4,    0xff, 0xff}; //Guess
 static const u8 ch_map6[] = {1, 5, 2, 3, 0,    4,    0xff}; //HP6DSM
 static const u8 ch_map7[] = {1, 5, 2, 4, 3,    6,    0}; //DX6i
-static const u8 ch_map8[] = {1, 5, 2, 3, 6,    0xff, 0xff, 4, 0, 7,    0xff, 0xff, 0xff, 0xff}; //DX8
-static const u8 ch_map9[] = {3, 2, 1, 5, 0,    4,    6,    7, 8, 0xff, 0xff, 0xff, 0xff, 0xff}; //DM9
-static const u8 ch_map10[] = {3, 2, 1, 5, 0,    4,    6,    7, 8, 9, 0xff, 0xff, 0xff, 0xff};
-static const u8 ch_map11[] = {3, 2, 1, 5, 0,    4,    6,    7, 8, 9, 10, 0xff, 0xff, 0xff};
-static const u8 ch_map12[] = {3, 2, 1, 5, 0,    4,    6,    7, 8, 9, 10, 11, 0xff, 0xff};
-static const u8 * const ch_map[] = {ch_map4, ch_map5, ch_map6, ch_map7, ch_map8, ch_map9, ch_map10, ch_map11, ch_map12};
+static const u8 ch_map8[] = {1, 5, 2, 3, 6,    0xff, 0xff, 4, 0, 7}; //DX8
+static const u8 ch_map9[] = {3, 2, 1, 5, 0,    4,    6,    7, 8, 0xff}; //DM9
+static const u8 * const ch_map[] = {ch_map6, ch_map7, ch_map8, ch_map9};//, ch_map10, ch_map11, ch_map12};
 
 u8 packet[16];
 u8 channels[23];
@@ -206,7 +201,10 @@ static void build_bind_packet()
 static void build_data_packet(u8 upper)
 {
     u8 i;
-    const u8 *chmap = ch_map[num_channels - 4];
+
+    // Simplified , starting from 9 channels, no change in the lesser orderings (Saving some memory)
+    const u8 *chmap = ch_map[num_channels - 6 < 3 ? num_channels - 6 : 3];// If > 8, use chmap for 9;
+
     if (binding && PROTOCOL_SticksMoved(0)) {
         //Don't turn off dialog until sticks are moved
         PROTOCOL_SetBindState(0);  //Turn off Bind dialog
@@ -223,9 +221,20 @@ static void build_data_packet(u8 upper)
     u16 max = 1 << bits;
     u16 pct_100 = (u32)max * 100 / 150;
     for (i = 0; i < 7; i++) {
-       unsigned idx = chmap[upper * 7 + i];
+       unsigned char posInMap = upper * 7 + i;
+
+       // Compute idx, the Deviation Tx channel number to put in this position in the buffer to transmit.
+       unsigned char idx;
+       if(posInMap > 9) {
+    	   // For positions starting from the 8th, they keep their ordering...
+    	   idx = posInMap >= (num_channels) ? 0xff : posInMap;
+       }
+       else {
+    	   idx = chmap[posInMap];
+       }
+
        s32 value;
-       if (chmap[upper*7 + i] == 0xff) {
+       if (idx == 0xff) {
            value = 0xffff;
        } else {
            if (binding && Model.limits[idx].flags & CH_FAILSAFE_EN) {
@@ -237,7 +246,7 @@ static void build_data_packet(u8 upper)
                value = max-1;
            else if (value < 0)
                value = 0;
-           value = (upper && i == 0 ? 0x8000 : 0) | (chmap[upper * 7 + i] << bits) | value;
+           value = (upper && i == 0 ? 0x8000 : 0) | (idx << bits) | value;
        }
        packet[i*2+2] = (value >> 8) & 0xff;
        packet[i*2+3] = (value >> 0) & 0xff;
