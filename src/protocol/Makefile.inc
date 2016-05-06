@@ -46,7 +46,7 @@ $(ODIR)/protocol/dsm2.mod : $(ODIR)/dsm2_cyrf6936.bin
 	@echo Building 'dsm2' module
 	/bin/mkdir -p $(ODIR)/protocol/ 2>/dev/null; /bin/cp $< $@
 
-$(ODIR)/protocol/dsmx.mod : $(ODIR)/dsm2_cyrf6936.bin
+$(ODIR)/protocol/dsmx.mod : $(ODIR)/dsmx_cyrf6936.bin
 	@echo Building 'dsmx' module
 	/bin/mkdir -p $(ODIR)/protocol/ 2>/dev/null; /bin/cp $< $@
 

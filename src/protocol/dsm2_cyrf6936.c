@@ -42,6 +42,10 @@
 #define BIND_CHANNEL 0x0d //This can be any odd channel
 #define MODEL 0
 
+#ifndef DSMX
+#define DSMX 0
+#endif
+
 #define NUM_WAIT_LOOPS (100 / 5) //each loop is ~5us.  Do not wait more than 100us
 
 static const char * const dsm_opts[] = {
@@ -182,7 +186,8 @@ static void build_bind_packet()
     packet[9] = sum & 0xff;
     packet[10] = 0x01; //???
     packet[11] = num_channels;
-    if(Model.protocol == PROTOCOL_DSMX) {
+
+    if(DSMX) {
 #ifdef MODULAR
         packet[12] = 0xb2;
 #else
@@ -210,14 +215,14 @@ static void build_data_packet(u8 upper)
         PROTOCOL_SetBindState(0);  //Turn off Bind dialog
         binding = 0;
     }
-    if (Model.protocol == PROTOCOL_DSMX) {
+    if (DSMX) {
         packet[0] = cyrfmfg_id[2];
         packet[1] = cyrfmfg_id[3] + model;
     } else {
         packet[0] = (0xff ^ cyrfmfg_id[2]);
         packet[1] = (0xff ^ cyrfmfg_id[3]) + model;
     }
-    u8 bits = Model.protocol == PROTOCOL_DSMX ? 11 : 10;
+    u8 bits = DSMX ? 11 : 10;
     u16 max = 1 << bits;
     u16 pct_100 = (u32)max * 100 / 150;
     for (i = 0; i < 7; i++) {
@@ -255,7 +260,7 @@ static void build_data_packet(u8 upper)
 
 static u8 get_pn_row(u8 channel)
 {
-    return Model.protocol == PROTOCOL_DSMX
+    return DSMX
            ? (channel - 2) % 5
            : channel % 5;
 }
@@ -343,7 +348,7 @@ static void set_sop_data_crc()
     CYRF_ConfigSOPCode(pncodes[pn_row][sop_col]);
     CYRF_ConfigDataCode(pncodes[pn_row][data_col], 16);
     /* setup for next iteration */
-    if(Model.protocol == PROTOCOL_DSMX)
+    if(DSMX)
         chidx = (chidx + 1) % 23;
     else
         chidx = (chidx + 1) % 2;
@@ -696,7 +701,7 @@ static void initialize(u8 bind)
 #endif
     cyrf_config();
 
-    if (Model.protocol == PROTOCOL_DSMX) {
+    if (DSMX) {
         calc_dsmx_channel();
     } else {
         if (RANDOM_CHANNELS) {
@@ -782,3 +787,5 @@ const void *DSM2_Cmds(enum ProtoCmds cmd)
 }
 
 #endif
+
+#undef DSMX
