@@ -43,7 +43,11 @@
 #define MODEL 0
 
 #ifndef DSMX
-#define DSMX 0
+#ifdef MODULAR
+	#define DSMX 0
+#else
+	#define DSMX (Model.protocol == PROTOCOL_DSMX)
+#endif
 #endif
 
 #define NUM_WAIT_LOOPS (100 / 5) //each loop is ~5us.  Do not wait more than 100us
